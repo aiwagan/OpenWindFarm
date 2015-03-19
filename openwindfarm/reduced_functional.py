@@ -112,7 +112,10 @@ class ReducedFunctional(ReducedFunctionalPrototype):
 
     def _compute_gradient(self, m, forget=True):
         """ Compute the functional gradient for the turbine positions/frictions array """
-        farm = self.solver.problem.parameters.tidal_farm
+        try:
+            farm = self.solver.problem.parameters.wind_farm
+        except:
+            farm = self.solver.problem.parameters.tidal_farm
 
         # If any of the parameters changed, the forward model needs to be re-run
         if numpy.any(m != self.last_m):
@@ -186,7 +189,10 @@ class ReducedFunctional(ReducedFunctionalPrototype):
         """ Compute the functional of interest for the turbine positions/frictions array """
         self.last_m = m
         self._update_turbine_farm(m)
-        farm = self.solver.problem.parameters.tidal_farm
+        try:
+            farm = self.solver.problem.parameters.wind_farm
+        except:
+            farm = self.solver.problem.parameters.tidal_farm
 
         # Configure dolfin-adjoint
         adj_reset()
@@ -224,7 +230,10 @@ class ReducedFunctional(ReducedFunctionalPrototype):
 
     def _update_turbine_farm(self, m):
         """ Update the turbine farm from the flattened parameter array m. """
-        farm = self.solver.problem.parameters.tidal_farm
+        try:
+            farm = self.solver.problem.parameters.wind_farm
+        except:
+            farm = self.solver.problem.parameters.tidal_farm
 
         if farm.turbine_specification.smeared:
             farm._parameters["friction"] = m
@@ -302,7 +311,10 @@ class ReducedFunctional(ReducedFunctionalPrototype):
         # iteration counter.
         if new_optimisation_iteration:
             self.solver.optimisation_iteration += 1
-            farm = self.solver.problem.parameters.tidal_farm
+            try:    
+              farm = self.solver.problem.parameters.wind_farm
+            except:
+               farm = self.solver.problem.parameters.tidal_farm
 
             if (self.solver.parameters.dump_period > 0 and
                 farm is not None):
@@ -336,7 +348,10 @@ class ReducedFunctional(ReducedFunctionalPrototype):
         """ Compute the scaling factor if never done before. """
 
         if self._automatic_scaling_factor is None:
-            farm = self.solver.problem.parameters.tidal_farm
+            try:
+                farm = self.solver.problem.parameters.wind_farm
+            except:
+                farm = self.solver.problem.parameters.tidal_farm
             if not farm.turbine_specification.controls.position:
                 raise NotImplementedError("Automatic scaling only works if "
                                           "the turbine positions are control "

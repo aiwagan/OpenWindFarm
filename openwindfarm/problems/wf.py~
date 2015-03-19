@@ -1,0 +1,73 @@
+from dolfin_adjoint import Constant
+from problem import Problem
+from ..helpers import FrozenClass
+from .. import finite_elements
+
+
+class WFProblemParameters(FrozenClass):
+    """ A set of parameters for a :class:`WFProblem`.
+    """
+
+    # Time parameters
+    dt = 0.05
+    start_time = 0.0
+    finish_time = 1.0
+
+    # Functional time integration parameters
+    functional_final_time_only = True
+
+    nu = Constant(2.e-5)
+
+    # Re_tau = 178.12
+    Re_tau = 392.24
+
+    velocity_degree = 2
+    pressure_degree = 1
+
+    max_inner_iters = 300
+    max_error = 1e-7
+
+    # Finite element settings
+    finite_element = staticmethod(finite_elements.p2p1)
+
+    # Initial condition
+    initial_condition = Constant((1e-16, 0, 0))
+
+    # Wind farm
+    wind_farm = None
+
+    # Domain
+    domain = None
+
+    initial_condition = Constant((1e-16, 0, 0))
+    initial_condition_u = Constant((1e-16, 0))
+    initial_condition_p = Constant((0))
+
+    # Boundary conditions
+    bcs = BoundaryConditionSet()
+
+class WFProblem(Problem):
+
+    def __init__(self, parameters):
+        """ Instantiates a new :class:`DummyProblem` object.
+
+            :parameter parameters: A :class:`DummyProblemParameters`
+                object containing the parameters of the problem.
+        """
+
+        if not isinstance(parameters, DummyProblemParameters):
+            raise TypeError("parameters must be of type \
+DummyProblemParameters.")
+
+        self.parameters = parameters
+
+    @property
+    def _is_transient(self):
+        return True
+
+    @staticmethod
+    def default_parameters():
+        ''' Returns a :class:`DummyProblemParameters` with default
+            parameters. '''
+
+        return DummyProblemParameters()
