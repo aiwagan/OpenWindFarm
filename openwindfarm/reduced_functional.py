@@ -114,8 +114,10 @@ class ReducedFunctional(ReducedFunctionalPrototype):
         """ Compute the functional gradient for the turbine positions/frictions array """
         try:
             farm = self.solver.problem.parameters.wind_farm
+            print "found a wind farm, computing gradient"
         except:
             farm = self.solver.problem.parameters.tidal_farm
+            print "found a tidal farm, computing gradient"
 
         # If any of the parameters changed, the forward model needs to be re-run
         if numpy.any(m != self.last_m):
@@ -191,8 +193,12 @@ class ReducedFunctional(ReducedFunctionalPrototype):
         self._update_turbine_farm(m)
         try:
             farm = self.solver.problem.parameters.wind_farm
+            print "found a wind farm, computing functional"
+
         except:
             farm = self.solver.problem.parameters.tidal_farm
+            print "found a tidal farm, computing functional"
+
 
         # Configure dolfin-adjoint
         adj_reset()
@@ -313,8 +319,12 @@ class ReducedFunctional(ReducedFunctionalPrototype):
             self.solver.optimisation_iteration += 1
             try:    
               farm = self.solver.problem.parameters.wind_farm
+              print "found a wind farm, computing _dj"
+
             except:
                farm = self.solver.problem.parameters.tidal_farm
+               print "found a tidal farm, computing _dj"
+
 
             if (self.solver.parameters.dump_period > 0 and
                 farm is not None):
@@ -350,8 +360,11 @@ class ReducedFunctional(ReducedFunctionalPrototype):
         if self._automatic_scaling_factor is None:
             try:
                 farm = self.solver.problem.parameters.wind_farm
+                print "found a wind farm, computing _set_automatic_scaling_factor"
             except:
                 farm = self.solver.problem.parameters.tidal_farm
+                print "found a tidal farm, computing _set_automatic_scaling_factor"
+
             if not farm.turbine_specification.controls.position:
                 raise NotImplementedError("Automatic scaling only works if "
                                           "the turbine positions are control "

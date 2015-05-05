@@ -54,6 +54,7 @@ coverage.xml
 *.pvd
 *.dat
 ffc_form*.h
+*.pvtu
 
 # Sphinx documentation
 docs/_build/

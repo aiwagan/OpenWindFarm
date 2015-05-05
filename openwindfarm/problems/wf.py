@@ -42,7 +42,7 @@ class WFProblemParameters(FrozenClass):
     # Domain
     domain = None
 
-    initial_condition = Constant((1e-16, 0, 0))
+    initial_condition = Constant((1., 0, 0))
     initial_condition_u = Constant((1e-16, 0))
     initial_condition_p = Constant((0))
 

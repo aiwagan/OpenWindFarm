@@ -77,16 +77,16 @@ domain = FileDomain("mesh/mesh.xml")
 
 # Specify boundary conditions.
 bcs = BoundaryConditionSet()
-bcs.add_bc("u", Constant((2, 0)), facet_id=1)
+bcs.add_bc("u", Constant((2., 0.)), facet_id=1, bctype="strong_dirichlet")
 # bcs.add_bc("eta", Constant(0), facet_id=2)
 # The free-slip boundary conditions.
-bcs.add_bc("u", Constant((0, 0)), facet_id=3, bctype="weak_dirichlet")
+bcs.add_bc("u", Constant((0., 0.)), facet_id=3, bctype="strong_dirichlet")
 
 # Set the shallow water parameters
 prob_params = WFProblem.default_parameters()
 prob_params.domain = domain
 prob_params.bcs = bcs
-prob_params.viscosity = Constant(2)
+prob_params.viscosity = Constant(20)
 
 # The next step is to create the turbine farm. In this case, the
 # farm consists of 32 turbines, initially deployed in a regular grid layout.
@@ -96,7 +96,7 @@ prob_params.viscosity = Constant(2)
 # Here we used the default BumpTurbine which defaults to being controlled by
 # just position. The diameter and friction are set. The minimum distance between
 # turbines if not specified is set to 1.5*diameter.
-turbine = BumpTurbine(diameter=20.0, friction=12.0)
+turbine = BumpTurbine(diameter=10.0, friction=1.0)
 
 # A rectangular farm is defined using the domain and the site dimensions.
 farm = RectangularFarm(domain, site_x_start=160, site_x_end=480,

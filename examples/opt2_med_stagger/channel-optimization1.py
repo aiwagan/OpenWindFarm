@@ -70,10 +70,11 @@
 # The first part of the program sets up a steady state shallow water problem,
 # and is nearly identical to the :ref:`channel_simulation` example:
 
-from opentidalfarm import *
+from openwindfarm import *
 
 # Create a rectangular domain.
-domain = FileDomain("mesh/mesh.xml")
+#domain = FileDomain("mesh/mesh.xml")
+domain = RectangularDomain(x0=0, y0=0, x1=1000, y1=1000, nx=200, ny=200)
 
 # Specify boundary conditions.
 bcs = BoundaryConditionSet()
@@ -86,9 +87,9 @@ bcs.add_bc("u", Constant((0, 0)), facet_id=3, bctype="weak_dirichlet")
 prob_params = SteadySWProblem.default_parameters()
 prob_params.domain = domain
 prob_params.bcs = bcs
-prob_params.viscosity = Constant(2)
-prob_params.depth = Constant(50)
-prob_params.friction = Constant(0.0025)
+prob_params.viscosity = Constant(2.)
+#prob_params.friction = Constant(0.00005)
+prob_params.friction = Constant(0)
 
 # The next step is to create the turbine farm. In this case, the
 # farm consists of 32 turbines, initially deployed in a regular grid layout.
@@ -98,14 +99,14 @@ prob_params.friction = Constant(0.0025)
 # Here we used the default BumpTurbine which defaults to being controlled by
 # just position. The diameter and friction are set. The minimum distance between
 # turbines if not specified is set to 1.5*diameter.
-turbine = BumpTurbine(diameter=20.0, friction=12.0)
+turbine = BumpTurbine(diameter=20.0, minimum_distance=30., friction=0.25)
 
 # A rectangular farm is defined using the domain and the site dimensions.
-farm = RectangularFarm(domain, site_x_start=160, site_x_end=480,
-                       site_y_start=80, site_y_end=240, turbine=turbine)
+farm = RectangularFarm(domain, site_x_start=150, site_x_end=850,
+                       site_y_start=150, site_y_end=850, turbine=turbine)
 
 # Turbines are then added to the site in a regular grid layout.
-farm.add_regular_turbine_layout(num_x=8, num_y=4)
+farm.add_staggered_turbine_layout(num_x=4, num_y=4)
 
 prob_params.tidal_farm = farm
 
@@ -117,9 +118,9 @@ problem = SteadySWProblem(prob_params)
 # water equations in its fully coupled form. We also set the dump period to 1 in
 # order to save the results of each optimisation iteration to disk.
 
-sol_params = CoupledSWSolver.default_parameters()
+sol_params = CoupledSWSolver1.default_parameters()
 sol_params.dump_period = 1
-solver = CoupledSWSolver(problem, sol_params)
+solver = CoupledSWSolver1(problem, sol_params)
 
 # Next we create a reduced functional, that is the functional considered as a
 # pure function of the control by implicitly solving the shallow water PDE. For
@@ -141,7 +142,8 @@ print rf_params
 # optimisation.
 
 lb, ub = farm.site_boundary_constraints()
-f_opt = maximize(rf, bounds=[lb, ub], method="L-BFGS-B", options={'maxiter': 100})
+ineq = farm.minimum_distance_constraints()
+f_opt = maximize(rf, bounds=[lb, ub], constraints=ineq, method="SLSQP", options={'maxiter': 300})
 
 # The example code can be found in ``examples/channel-optimization/`` in the
 # ``OpenTidalFarm`` source tree, and executed as follows:

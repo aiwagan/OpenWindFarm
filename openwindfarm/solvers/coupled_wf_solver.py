@@ -71,7 +71,7 @@ class CoupledWFSolver(Solver):
     def _finished(self, current_time, finish_time):
         return float(current_time - finish_time) >= - 1e3*DOLFIN_EPS
 
-    def _generate_strong_bcs(self):
+    def _generate_bcs(self):
 
         bcs = self.problem.parameters.bcs
         facet_ids = self.problem.parameters.domain.facet_ids
@@ -83,14 +83,13 @@ class CoupledWFSolver(Solver):
             bc = DirichletBC(fs.sub(0), expr, facet_ids, facet_id)
             bcs_u.append(bc)
 
-        # Generate free-surface boundary conditions
-        bcs_p = []
-        for _, expr, facet_id, _ in bcs.filter("p", "strong_dirichlet"):
-            bc = DirichletBC(fs.sub(1), expr, facet_ids, facet_id)
-            bcs_p.append(bc)
+        # # Generate free-surface boundary conditions
+        # bcs_p = []
+        # for _, expr, facet_id, _ in bcs.filter("p", "strong_dirichlet"):
+        #     bc = DirichletBC(fs.sub(1), expr, facet_ids, facet_id)
+        #     bcs_p.append(bc)
 
-        return bcs_u + bcs_p
-
+        return bcs_u 
     
     def solve(self, annotate=True):
         '''Solve the coupled NSE equations'''
@@ -118,10 +117,13 @@ class CoupledWFSolver(Solver):
         log(INFO, "Solve a steady-state NSE problem")
 
         # Get temporal settings
-        theta = Constant(problem_params.theta)
-        dt = Constant(problem_params.dt)
-        finish_time = Constant(problem_params.finish_time)
-        t = Constant(problem_params.start_time)
+        theta = Constant(1.)
+        dt = Constant(1.)
+        finish_time = Constant(0.5)
+
+        t = Constant(0.)
+
+        include_time_term = False
 
         nu = problem_params.viscosity
         # f_u = problem_params.f_u
@@ -131,7 +133,6 @@ class CoupledWFSolver(Solver):
          # Get boundary conditions
         bcs = problem_params.bcs
 
-        include_time_term = False
         cache_forward_state = solver_params.cache_forward_state
 
 
@@ -161,23 +162,29 @@ class CoupledWFSolver(Solver):
             tf = Function(farm.friction_function, name="turbine_friction", annotate=annotate)
 
         if farm:
-            F_ad = -tf*dot(u_,u_)**0.5*inner(u_, v)*farm.site_dx
+            F_ad = tf*dot(u_,u_)**0.5*inner(u_, v)*farm.site_dx
 
+        # F_ad = Constant((0.,0.))*dx
         # setup equations
         F = inner(dot(grad(u_), u_), v)*dx + nu*inner(grad(u_), grad(v))*dx \
         - inner(p_, div(v))*dx - inner(q, div(u_))*dx + F_ad
+
+        # a=lhs(F)
+        # L=rhs(F)
 
         # J = derivative(F, up_, up)
         # A = Matrix()
 
         # Generate the scheme specific strong boundary conditions
-        strong_bcs = self._generate_strong_bcs()
+        facet_ids = self.problem.parameters.domain.facet_ids
+        fs = self.function_space
+        bcs_u = [DirichletBC(fs.sub(0), Constant((2.0,0.)),"on_boundary && near(x[0], 0)")]
 
 
         # #assemble
-        # A = assemble(J, tensor=A, annotate=annotate)
-        # for bc in strong_bcs:
-        #     bc.apply(A)
+        # A = assemble(a, annotate=annotate)
+        # for bc in bcs_u:
+        #     bc.apply(A, annotate=annotate)
 
         ############################### Perform the simulation ###########################
 
@@ -202,10 +209,13 @@ class CoupledWFSolver(Solver):
             timestep += 1
             t = Constant(t + dt)
 
-            # Update bc's
-            t_theta = Constant(t - (1.0 - theta) * dt)
-            bcs.update_time(t, only_type=["strong_dirichlet"])
-            bcs.update_time(t_theta, exclude_type=["strong_dirichlet"])
+            # b = assemble(L, annotate=annotate)
+            # [bc.apply(b) for bc in bcs_u]
+
+            # # Update bc's
+            # t_theta = Constant(t - (1.0 - theta) * dt)
+            # bcs.update_time(t, only_type=["strong_dirichlet"])
+            # bcs.update_time(t_theta, exclude_type=["strong_dirichlet"])
 
             # Update source term
             # f_u.t = Constant(t_theta)
@@ -225,10 +235,10 @@ class CoupledWFSolver(Solver):
             #solve
             log(INFO, "Solve steady NS equations.")
 
-            solve(F == 0, up_, bcs=strong_bcs,
+            solve(F==0, up_, bcs=bcs_u,
                   solver_parameters=solver_params.dolfin_solver,
-                  annotate=annotate,
-                  J=derivative(F,up_, up))
+                  annotate=annotate)
+                  
 
             # up_1.vector().zero()
             # solve(A, up_1.vector(), up, annotate=annotate)
@@ -238,7 +248,7 @@ class CoupledWFSolver(Solver):
             #     bc.apply(up.vector(), up_.vector())
 
             # After the timestep solve, update state
-            up_.assign(up, annotate=annotate)
+            up_1.assign(up_, annotate=annotate)
 
             if cache_forward_state:
                 # Save state for initial guess cache
@@ -257,7 +267,7 @@ class CoupledWFSolver(Solver):
             if (solver_params.dump_period > 0 and
                 timestep % solver_params.dump_period == 0):
                 log(INFO, "Write state to disk...")
-                writer.write(up_)
+                writer.write(up_1)
 
             # Increase the adjoint timestep
             adj_inc_timestep(time=float(t), finished=self._finished(t,
